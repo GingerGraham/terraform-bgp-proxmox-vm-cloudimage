@@ -1,0 +1,32 @@
+name: Terraform Docs Check
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  terraform-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Render terraform-docs into README
+        uses: terraform-docs/gh-actions@v1.3.0
+        with:
+          working-dir: .
+          config-file: .terraform-docs.yml
+          output-file: README.md
+          output-method: inject
+          git-push: "false"
+
+      - name: Fail on stale docs
+        run: |
+          git diff -- README.md
+          git diff --exit-code -- README.md
