@@ -94,7 +94,7 @@ resource "proxmox_virtual_environment_vm" "vm" {
     for_each = local.resolved_additional_disks
     content {
       interface         = disk.value.interface
-      datastore_id      = try(disk.value.datastore_id, null)
+      datastore_id      = coalesce(try(disk.value.datastore_id, null), var.disk_datastore)
       file_id           = try(disk.value.file_id, null)
       import_from       = try(disk.value.import_from, null)
       path_in_datastore = try(disk.value.path_in_datastore, null)

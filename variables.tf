@@ -414,12 +414,12 @@ variable "disk_discard" {
 }
 
 variable "disk_interface" {
-  description = "Disk interface type"
+  description = "Primary disk interface (indexed form like scsi0/virtio1, or bus-only scsi/sata/virtio which normalizes to index 0)"
   type        = string
   default     = "scsi0"
   validation {
-    condition     = can(regex("^(scsi|sata|virtio)[0-9]+$", var.disk_interface))
-    error_message = "disk_interface must be one of scsi, sata, or virtio followed by a number (for example scsi0, sata1, virtio2)"
+    condition     = can(regex("^(scsi|sata|virtio)([0-9]+)?$", lower(trimspace(var.disk_interface))))
+    error_message = "disk_interface must be scsi, sata, or virtio with an optional numeric index (for example scsi, scsi0, sata1, virtio2)."
   }
 }
 
