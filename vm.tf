@@ -91,7 +91,7 @@ resource "proxmox_virtual_environment_vm" "vm" {
   }
 
   dynamic "disk" {
-    for_each = var.additional_disks
+    for_each = local.resolved_additional_disks
     content {
       interface         = disk.value.interface
       datastore_id      = try(disk.value.datastore_id, null)
@@ -408,6 +408,21 @@ resource "proxmox_virtual_environment_vm" "vm" {
   description = var.description
 
   lifecycle {
+    precondition {
+      condition     = local.can_auto_assign_all_additional_disk_indexes
+      error_message = "Unable to auto-assign additional disk interfaces because no free indices remain on the primary disk bus. Provide explicit additional_disks[*].interface values to continue."
+    }
+
+    precondition {
+      condition     = local.all_resolved_disk_interfaces_valid
+      error_message = "All resolved disk interfaces must match ideN, sataN, scsiN, or virtioN."
+    }
+
+    precondition {
+      condition     = local.resolved_disk_interfaces_are_unique
+      error_message = "Duplicate disk interfaces detected across primary and additional disks. Each disk interface must be unique."
+    }
+
     # Ignore cloud-init configuration changes after initial creation
     # This is the expected behavior - cloud-init runs once at creation time
     ignore_changes = [

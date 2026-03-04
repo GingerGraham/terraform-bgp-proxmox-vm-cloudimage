@@ -7,7 +7,7 @@ variable "acpi" {
 variable "additional_disks" {
   description = "Additional disk blocks"
   type = list(object({
-    interface         = string
+    interface         = optional(string)
     datastore_id      = optional(string)
     file_id           = optional(string)
     import_from       = optional(string)
@@ -34,6 +34,16 @@ variable "additional_disks" {
     }))
   }))
   default = []
+
+  validation {
+    condition = alltrue([
+      for disk in var.additional_disks : (
+        try(disk.interface, null) == null || trimspace(try(disk.interface, "")) == "" ||
+        can(regex("^(ide|sata|scsi|virtio)([0-9]+)?$", lower(trimspace(disk.interface))))
+      )
+    ])
+    error_message = "additional_disks[*].interface must be omitted/empty for auto-assignment or match ideN, sataN, scsiN, virtioN (bus-only values like 'virtio' are also accepted and normalized to index 0)."
+  }
 }
 
 variable "additional_network_devices" {
@@ -396,6 +406,11 @@ variable "disk_discard" {
   description = "Enable discard/TRIM"
   type        = string
   default     = null
+
+  validation {
+    condition     = var.disk_discard == null || contains(["on", "ignore"], var.disk_discard)
+    error_message = "disk_discard must be one of: on, ignore"
+  }
 }
 
 variable "disk_interface" {

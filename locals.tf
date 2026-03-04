@@ -6,6 +6,67 @@ locals {
   # Proxmox device names expected by qm/proxmox APIs (for example "virtio0").
   disk_interface = contains(["ide", "sata", "scsi", "virtio"], var.disk_interface) ? "${var.disk_interface}0" : var.disk_interface
 
+  primary_disk_match = regexall("^(ide|sata|scsi|virtio)([0-9]+)$", local.disk_interface)
+  primary_disk_bus   = length(local.primary_disk_match) > 0 ? local.primary_disk_match[0][0] : "virtio"
+  primary_disk_index = length(local.primary_disk_match) > 0 ? tonumber(local.primary_disk_match[0][1]) : 0
+
+  normalized_additional_disk_interfaces = [
+    for disk in var.additional_disks : (
+      try(disk.interface, null) == null || trimspace(try(disk.interface, "")) == "" ? null : (
+        contains(["ide", "sata", "scsi", "virtio"], lower(trimspace(disk.interface))) ?
+        "${lower(trimspace(disk.interface))}0" :
+        lower(trimspace(disk.interface))
+      )
+    )
+  ]
+
+  explicit_additional_primary_bus_indexes = [
+    for iface in local.normalized_additional_disk_interfaces : tonumber(regexall("^(ide|sata|scsi|virtio)([0-9]+)$", iface)[0][1])
+    if iface != null &&
+    length(regexall("^(ide|sata|scsi|virtio)([0-9]+)$", iface)) > 0 &&
+    regexall("^(ide|sata|scsi|virtio)([0-9]+)$", iface)[0][0] == local.primary_disk_bus
+  ]
+
+  used_primary_bus_indexes = distinct(concat([local.primary_disk_index], local.explicit_additional_primary_bus_indexes))
+
+  auto_assigned_disk_positions = [
+    for index, iface in local.normalized_additional_disk_interfaces : index
+    if iface == null
+  ]
+
+  available_primary_bus_indexes = [
+    for index in range(0, 31) : index
+    if !contains(local.used_primary_bus_indexes, index)
+  ]
+
+  can_auto_assign_all_additional_disk_indexes = length(local.available_primary_bus_indexes) >= length(local.auto_assigned_disk_positions)
+
+  auto_assigned_disk_interfaces_by_position = {
+    for offset, position in local.auto_assigned_disk_positions :
+    position => "${local.primary_disk_bus}${local.available_primary_bus_indexes[offset]}"
+  }
+
+  resolved_additional_disks = [
+    for index, disk in var.additional_disks : merge(disk, {
+      interface = (
+        local.normalized_additional_disk_interfaces[index] != null
+        ? local.normalized_additional_disk_interfaces[index]
+        : try(local.auto_assigned_disk_interfaces_by_position[index], "${local.primary_disk_bus}0")
+      )
+    })
+  ]
+
+  resolved_all_disk_interfaces = concat(
+    [local.disk_interface],
+    [for disk in local.resolved_additional_disks : disk.interface]
+  )
+
+  all_resolved_disk_interfaces_valid = alltrue([
+    for iface in local.resolved_all_disk_interfaces : can(regex("^(ide|sata|scsi|virtio)[0-9]+$", iface))
+  ])
+
+  resolved_disk_interfaces_are_unique = length(local.resolved_all_disk_interfaces) == length(distinct(local.resolved_all_disk_interfaces))
+
   # Use vm_name as hostname if hostname not explicitly provided
   effective_hostname_input = var.hostname != null ? var.hostname : var.vm_name
 
