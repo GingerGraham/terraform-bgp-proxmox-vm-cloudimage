@@ -426,6 +426,9 @@ resource "proxmox_virtual_environment_vm" "vm" {
     # Ignore cloud-init configuration changes after initial creation
     # This is the expected behavior - cloud-init runs once at creation time
     ignore_changes = [
+      # Ignore node drift after create so external migrations do not
+      # cause Terraform/OpenTofu to migrate the VM back.
+      node_name,
       # Ignore cloud image source after initial creation. This allows
       # day-2 updates to proceed even if source image files are rotated out.
       disk[0].file_id,
