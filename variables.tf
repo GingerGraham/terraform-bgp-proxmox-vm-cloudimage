@@ -212,7 +212,7 @@ variable "cloud_init_builtin" {
     timezone                = optional(string, "UTC")
     dns_domain              = optional(string, "local")
     lock_passwd             = optional(bool, false)
-    distro_profile          = optional(string, "generic")
+    distro_profile          = optional(string, "generic") # generic, debian, ubuntu, fedora, rhel, centos_stream, rocky, almalinux, opensuse, arch
     user_shell              = optional(string, "/bin/bash")
     sudo_groups             = optional(list(string))
     packages                = optional(list(string), [])
@@ -239,11 +239,17 @@ variable "cloud_init_builtin" {
   validation {
     condition = var.cloud_init_builtin == null ? true : contains([
       "generic",
+      "debian",
+      "arch",
       "fedora",
+      "rhel",
+      "centos_stream",
+      "rocky",
+      "almalinux",
       "ubuntu",
       "opensuse"
     ], lower(var.cloud_init_builtin.distro_profile))
-    error_message = "cloud_init_builtin.distro_profile must be one of: generic, fedora, ubuntu, opensuse"
+    error_message = "cloud_init_builtin.distro_profile must be one of: generic, debian, ubuntu, fedora, rhel, centos_stream, rocky, almalinux, opensuse, arch"
   }
 }
 

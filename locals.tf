@@ -107,40 +107,104 @@ locals {
 
   builtin_profiles = {
     generic = {
-      sudo_groups       = ["sudo"]
-      firewall_package  = ""
-      firewall_enable   = ""
-      firewall_open_ssh = ""
-      firewall_reload   = ""
-      qga_package       = "qemu-guest-agent"
-      qga_service       = "qemu-guest-agent"
+      sudo_groups        = ["sudo"]
+      firewall_package   = ""
+      firewall_enable    = ""
+      firewall_open_ssh  = ""
+      firewall_reload    = ""
+      qga_package        = "qemu-guest-agent"
+      qga_service        = "qemu-guest-agent"
+      chrony_dropin_path = null
     }
     fedora = {
-      sudo_groups       = ["wheel"]
-      firewall_package  = "firewalld"
-      firewall_enable   = "systemctl enable --now firewalld"
-      firewall_open_ssh = "firewall-cmd --permanent --add-service=ssh"
-      firewall_reload   = "firewall-cmd --reload"
-      qga_package       = "qemu-guest-agent"
-      qga_service       = "qemu-guest-agent"
+      sudo_groups        = ["wheel"]
+      firewall_package   = "firewalld"
+      firewall_enable    = "systemctl enable --now firewalld"
+      firewall_open_ssh  = "firewall-cmd --permanent --add-service=ssh"
+      firewall_reload    = "firewall-cmd --reload"
+      qga_package        = "qemu-guest-agent"
+      qga_service        = "qemu-guest-agent"
+      chrony_dropin_path = "/etc/chrony.d/makestep.conf"
+    }
+    rhel = {
+      sudo_groups        = ["wheel"]
+      firewall_package   = "firewalld"
+      firewall_enable    = "systemctl enable --now firewalld"
+      firewall_open_ssh  = "firewall-cmd --permanent --add-service=ssh"
+      firewall_reload    = "firewall-cmd --reload"
+      qga_package        = "qemu-guest-agent"
+      qga_service        = "qemu-guest-agent"
+      chrony_dropin_path = "/etc/chrony.d/makestep.conf"
+    }
+    centos_stream = {
+      sudo_groups        = ["wheel"]
+      firewall_package   = "firewalld"
+      firewall_enable    = "systemctl enable --now firewalld"
+      firewall_open_ssh  = "firewall-cmd --permanent --add-service=ssh"
+      firewall_reload    = "firewall-cmd --reload"
+      qga_package        = "qemu-guest-agent"
+      qga_service        = "qemu-guest-agent"
+      chrony_dropin_path = "/etc/chrony.d/makestep.conf"
+    }
+    rocky = {
+      sudo_groups        = ["wheel"]
+      firewall_package   = "firewalld"
+      firewall_enable    = "systemctl enable --now firewalld"
+      firewall_open_ssh  = "firewall-cmd --permanent --add-service=ssh"
+      firewall_reload    = "firewall-cmd --reload"
+      qga_package        = "qemu-guest-agent"
+      qga_service        = "qemu-guest-agent"
+      chrony_dropin_path = "/etc/chrony.d/makestep.conf"
+    }
+    almalinux = {
+      sudo_groups        = ["wheel"]
+      firewall_package   = "firewalld"
+      firewall_enable    = "systemctl enable --now firewalld"
+      firewall_open_ssh  = "firewall-cmd --permanent --add-service=ssh"
+      firewall_reload    = "firewall-cmd --reload"
+      qga_package        = "qemu-guest-agent"
+      qga_service        = "qemu-guest-agent"
+      chrony_dropin_path = "/etc/chrony.d/makestep.conf"
     }
     ubuntu = {
-      sudo_groups       = ["sudo"]
-      firewall_package  = "ufw"
-      firewall_enable   = "ufw --force enable"
-      firewall_open_ssh = "ufw allow OpenSSH"
-      firewall_reload   = ""
-      qga_package       = "qemu-guest-agent"
-      qga_service       = "qemu-guest-agent"
+      sudo_groups        = ["sudo"]
+      firewall_package   = "ufw"
+      firewall_enable    = "ufw --force enable"
+      firewall_open_ssh  = "ufw allow OpenSSH"
+      firewall_reload    = ""
+      qga_package        = "qemu-guest-agent"
+      qga_service        = "qemu-guest-agent"
+      chrony_dropin_path = "/etc/chrony/conf.d/makestep.conf"
+    }
+    debian = {
+      sudo_groups        = ["sudo"]
+      firewall_package   = "ufw"
+      firewall_enable    = "ufw --force enable"
+      firewall_open_ssh  = "ufw allow OpenSSH"
+      firewall_reload    = ""
+      qga_package        = "qemu-guest-agent"
+      qga_service        = "qemu-guest-agent"
+      chrony_dropin_path = "/etc/chrony/conf.d/makestep.conf"
+    }
+    arch = {
+      sudo_groups        = ["wheel"]
+      firewall_package   = ""
+      firewall_enable    = ""
+      firewall_open_ssh  = ""
+      firewall_reload    = ""
+      qga_package        = "qemu-guest-agent"
+      qga_service        = "qemu-guest-agent"
+      chrony_dropin_path = null
     }
     opensuse = {
-      sudo_groups       = ["wheel"]
-      firewall_package  = "firewalld"
-      firewall_enable   = "systemctl enable --now firewalld"
-      firewall_open_ssh = "firewall-cmd --permanent --add-service=ssh"
-      firewall_reload   = "firewall-cmd --reload"
-      qga_package       = "qemu-guest-agent"
-      qga_service       = "qemu-guest-agent"
+      sudo_groups        = ["wheel"]
+      firewall_package   = "firewalld"
+      firewall_enable    = "systemctl enable --now firewalld"
+      firewall_open_ssh  = "firewall-cmd --permanent --add-service=ssh"
+      firewall_reload    = "firewall-cmd --reload"
+      qga_package        = "qemu-guest-agent"
+      qga_service        = "qemu-guest-agent"
+      chrony_dropin_path = "/etc/chrony.d/makestep.conf"
     }
   }
 
@@ -161,7 +225,21 @@ locals {
     local.builtin_profile.sudo_groups
   ) : []
 
+  builtin_chrony_write_files = local.using_builtin_cloud_init && local.builtin_profile.chrony_dropin_path != null ? [
+    {
+      path        = local.builtin_profile.chrony_dropin_path
+      content     = "makestep 1.0 -1\n"
+      owner       = "root:root"
+      permissions = "0644"
+    }
+  ] : []
+
+  builtin_chrony_inline_runcmd = local.using_builtin_cloud_init && local.builtin_profile.chrony_dropin_path == null ? [
+    "grep -Eq '^[[:space:]]*makestep[[:space:]]+1\\.0[[:space:]]+-1([[:space:]]|$)' /etc/chrony.conf || printf '\\nmakestep 1.0 -1\\n' >> /etc/chrony.conf"
+  ] : []
+
   builtin_write_files = local.using_builtin_cloud_init ? concat(
+    local.builtin_chrony_write_files,
     var.cloud_init_builtin.write_files,
     var.cloud_init_builtin.extra_write_files
   ) : []
@@ -186,8 +264,10 @@ locals {
       local.builtin_profile.firewall_open_ssh,
       local.builtin_profile.firewall_reload
     ] : [],
+    local.builtin_chrony_inline_runcmd,
     var.cloud_init_builtin.runcmd,
-    var.cloud_init_builtin.extra_runcmd
+    var.cloud_init_builtin.extra_runcmd,
+    ["chronyc makestep 2>/dev/null || true"]
   )) : []
 
   effective_tags = distinct(concat(
